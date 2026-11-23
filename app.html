@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <title>Flatbed</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -24,7 +24,11 @@
   --bg:#0F1015; --surface:#1A1C24; --ink:#ECEDF3; --muted:#9A9EAE; --line:#2B2E39;
   --accent:#8189FF; --accent-ink:#0F1015; --accent-soft:#252A55; --danger:#FF6B6B; color-scheme:dark}
 
-html{height:100%;box-sizing:border-box}
+/* --vp-gap: extra height the installed iPhone app needs when iOS reports a viewport shorter than the screen (set by the standalone build) */
+/* Overlays (sheets, toast, busy) are positioned against <html>, not the screen: in the installed iPhone app iOS reports
+   the screen and the page with different heights, and <html> is the box the layout is sized to. */
+/* app, not a page: no double-tap zoom (pinch is blocked in the script) */
+html{touch-action:manipulation;position:relative;height:calc(100% + var(--vp-gap,0px));box-sizing:border-box;overflow:hidden}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0}
@@ -35,9 +39,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.vh{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 
 #app{position:relative;height:100%;overflow:hidden}
+/* Installed iPhone app (.ios-app, set by the standalone build): iOS blurs the top of the app down to ~97pt from the top
+   of the screen (measured on an iPhone screenshot), whatever the status bar style. Start every view below that. */
+.ios-app .view{padding-top:42px}
 .view{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);animation:viewIn .22s ease-out}
 .view.studio{background:var(--studio);color:var(--studio-ink)}
 @keyframes viewIn{from{opacity:0;transform:translateY(8px)}}
@@ -58,6 +65,9 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .btn:active{transform:scale(.98)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
 .btn.wide{width:100%}
+.btn.danger{background:var(--danger);color:#fff;border-color:transparent}
+.row2{display:flex;gap:10px}
+.row2>.btn{flex:1;min-width:0;padding:0 12px;white-space:nowrap}
 .btn:disabled{opacity:.4;pointer-events:none}
 .studio .btn{background:var(--studio-3);color:var(--studio-ink);border-color:transparent}
 .studio .btn.primary{background:var(--handle);color:#17120A}
@@ -117,8 +127,13 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tile.lost .lost-note{display:grid;place-items:center;position:absolute;inset:0;padding:14px;text-align:center;font-size:13px;color:var(--danger);font-weight:600}
 .tile.fresh{animation:pop .5s ease-out}
 @keyframes pop{0%{transform:scale(.85);opacity:0}60%{transform:scale(1.03)}}
-.tile.sortable-ghost{opacity:.35}
-.tile.sortable-chosen{box-shadow:0 12px 30px rgba(20,22,40,.25);transform:scale(1.03)}
+.tile-wrap{position:relative;min-width:0}
+.tile-del{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:17px;display:grid;place-items:center;background:rgba(15,16,21,.72);color:#fff;z-index:1}
+.tile-del::before{content:"";position:absolute;inset:-6px}
+.tile-del svg.i{width:18px;height:18px}
+.tile-del:active{background:var(--danger)}
+.tile-wrap.sortable-ghost{opacity:.35}
+.tile-wrap.sortable-chosen .tile{box-shadow:0 12px 30px rgba(20,22,40,.25);transform:scale(1.03)}
 .add-tile{aspect-ratio:1/1.3;border-radius:10px;border:2px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--accent);font-weight:600}
 .add-tile:active{background:var(--accent-soft)}
 .hint{font-size:12.5px;color:var(--muted);text-align:center;margin-top:14px}
@@ -163,7 +178,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tool.danger{color:#FF7A7A}
 
 /* ---------- sheet / toast / busy ---------- */
-.sheet{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end}
+.sheet{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end}
 .sheet-scrim{position:absolute;inset:0;background:rgba(8,9,14,.45);animation:fade .2s}
 @keyframes fade{from{opacity:0}}
 .sheet-panel{position:relative;background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;padding-top:8px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));animation:up .25s ease-out;max-height:90%;overflow-y:auto}
@@ -176,13 +191,14 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .seg button{flex:1;min-height:40px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(20,22,40,.14)}
 .est{font-size:12.5px;color:var(--muted);margin:2px 0 14px;min-height:1.2em}
+.confirm-text{color:var(--muted);margin:-6px 0 18px;line-height:1.45}
 
-#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:50;width:min(440px,calc(100% - 32px));
+#toast{position:absolute;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:50;width:min(440px,calc(100% - 32px));
   display:flex;align-items:center;gap:10px;background:#1C1E27;color:#F2F3F7;border-radius:14px;padding:12px 8px 12px 16px;box-shadow:0 12px 34px rgba(0,0,0,.3);font-size:14px;animation:up2 .22s ease-out}
 @keyframes up2{from{opacity:0;transform:translate(-50%,10px)}}
 #toast span{flex:1;min-width:0}
 #toast button{color:var(--handle);font-weight:700;padding:8px 10px;border-radius:8px}
-#busy{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(8,9,14,.55)}
+#busy{position:absolute;inset:0;z-index:60;display:grid;place-items:center;background:rgba(8,9,14,.55)}
 #busy .box{display:flex;flex-direction:column;align-items:center;gap:14px;background:#1C1E27;color:#F2F3F7;padding:22px 26px;border-radius:18px;font-weight:500;min-width:200px;text-align:center}
 .spin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:var(--handle);animation:rot .8s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
@@ -287,7 +303,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <div class="field"><span class="lbl">Quality</span>
       <div class="seg" data-key="quality"><button data-v="small">Small</button><button data-v="standard">Standard</button><button data-v="high">High</button></div></div>
     <p class="est mono" id="est"></p>
-    <button class="btn primary wide" id="do-export">Save PDF</button>
+    <div class="row2"><button class="btn" id="do-zip" hidden>Save ZIP</button><button class="btn primary" id="do-export">Save or share PDF</button></div>
   </div>
 </div>
 
@@ -298,6 +314,16 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <h2 id="ready-title">Ready to save</h2>
     <p class="est mono" id="ready-info"></p>
     <button class="btn primary wide" id="ready-share"><svg class="i"><use href="#i-export"/></svg>Save or share…</button>
+  </div>
+</div>
+
+<div class="sheet" id="confirm" hidden>
+  <div class="sheet-scrim" id="confirm-scrim"></div>
+  <div class="sheet-panel gut" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+    <div class="grab"></div>
+    <h2 id="confirm-title">Delete?</h2>
+    <p class="confirm-text" id="confirm-text"></p>
+    <div class="row2"><button class="btn" id="confirm-no">Cancel</button><button class="btn danger" id="confirm-yes">Delete</button></div>
   </div>
 </div>
 
@@ -751,6 +777,22 @@ function hideToast(commit){
   clearTimeout(toastTimer); $("#toast").hidden = true;
   if (toastUndo && toastUndo.commit) toastUndo.commit(); toastUndo = null;
 }
+function confirmSheet({ title, text, yes = "Delete" }){
+  return new Promise(res => {
+    $("#confirm-title").textContent = title; $("#confirm-text").textContent = text; $("#confirm-yes").textContent = yes;
+    $("#toast").hidden = true; // its timer still finishes any pending undo
+    $("#confirm").hidden = false;
+    const done = v => { $("#confirm").hidden = true; $("#confirm-yes").onclick = $("#confirm-no").onclick = $("#confirm-scrim").onclick = null; res(v); };
+    $("#confirm-yes").onclick = () => done(true);
+    $("#confirm-no").onclick = $("#confirm-scrim").onclick = () => done(false);
+  });
+}
+const pagesWord = n => `${n} ${n === 1 ? "page" : "pages"}`;
+// No zooming: iOS can ignore user-scalable=no, so cancel its pinch gestures directly.
+for (const t of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(t, e => e.preventDefault(), { passive: false });
+document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+// Only the lists inside a view scroll; the page itself never should (iOS can nudge it when focusing a field).
+addEventListener("scroll", () => { if (scrollX || scrollY) scrollTo(0, 0); });
 $("#toast-act").onclick = () => { const u = toastUndo; toastUndo = null; $("#toast").hidden = true; clearTimeout(toastTimer); if (u) u.undo(); };
 
 /* ---------- library ---------- */
@@ -793,7 +835,8 @@ async function renderLibrary(){
     : "This browser isn't letting Flatbed store scans, so they'll be gone when you close the page. Export before you leave.";
   body.appendChild(note);
 }
-function deleteDoc(d){
+async function deleteDoc(d){
+  if (!await confirmSheet({ title: `Delete “${d.name}”?`, text: `${d.pages.length > 1 ? "All " + pagesWord(d.pages.length) : "Its page"} will be removed from this device.` })) return;
   docs = docs.filter(x => x.id !== d.id); S.delDoc(d.id);
   if (cur && cur.id === d.id) cur = null;
   show("v-library"); renderLibrary();
@@ -813,6 +856,7 @@ async function renderDoc(){
   $("#doc-sub").textContent = `${n} ${n === 1 ? "page" : "pages"} · ${fmtBytes(bytes)}`;
   const grid = $("#grid"); grid.textContent = "";
   cur.pages.forEach((p, i) => {
+    const w = document.createElement("div"); w.className = "tile-wrap";
     const b = document.createElement("button"); b.className = "tile" + (p.id === freshId ? " fresh" : ""); b.dataset.id = p.id;
     b.setAttribute("aria-label", `Page ${i + 1}`);
     b.innerHTML = `<img alt=""><span class="lost-note">This page's image was lost. Tap to retake it.</span><span class="num mono">${i + 1}</span>`;
@@ -822,7 +866,10 @@ async function renderDoc(){
       if (b.classList.contains("lost")) { startCamera({ mode: "replace", pageId: p.id }); return; }
       openPage(cur.pages.findIndex(x => x.id === p.id));
     };
-    grid.appendChild(b);
+    const del = document.createElement("button"); del.className = "tile-del"; del.setAttribute("aria-label", `Delete page ${i + 1}`);
+    del.innerHTML = `<svg class="i"><use href="#i-trash"/></svg>`;
+    del.onclick = () => deletePage(cur, p);
+    w.append(b, del); grid.appendChild(w);
   });
   freshId = null;
   const add = document.createElement("button"); add.className = "add-tile";
@@ -832,7 +879,7 @@ async function renderDoc(){
   $("#grid-hint").hidden = n < 1; $("#doc-export").disabled = n < 1;
   if (window.Sortable && !sortable) {
     sortable = Sortable.create(grid, {
-      animation: 160, delay: 220, delayOnTouchOnly: true, draggable: ".tile", filter: ".add-tile",
+      animation: 160, delay: 220, delayOnTouchOnly: true, draggable: ".tile-wrap", filter: ".add-tile",
       onEnd: e => {
         if (e.oldDraggableIndex === e.newDraggableIndex) return;
         const [m] = cur.pages.splice(e.oldDraggableIndex, 1); cur.pages.splice(e.newDraggableIndex, 0, m);
@@ -1102,9 +1149,14 @@ $("#pv-crop").onclick = async () => {
   unbusy(); openAdjust({ orig, blob: null, mode: "recrop", pageId: page.id });
 };
 $("#pv-retake").onclick = () => { if (!pv) return; startCamera({ mode: "replace", pageId: pv.page.id }); };
-$("#pv-delete").onclick = () => {
-  if (!pv) return; const page = pv.page; const idx = cur.pages.indexOf(page); const doc = cur;
-  doc.pages.splice(idx, 1); saveDoc(doc); free(pv.orig, pv.small); pv = null;
+$("#pv-delete").onclick = () => pv && deletePage(cur, pv.page);
+async function deletePage(doc, page){
+  const idx = doc.pages.indexOf(page); if (idx < 0) return;
+  const rest = doc.pages.length - 1;
+  if (!await confirmSheet({ title: `Delete page ${idx + 1}?`,
+    text: rest ? `“${doc.name}” keeps its other ${pagesWord(rest)}.` : `It's the only page in “${doc.name}”.` })) return;
+  doc.pages.splice(idx, 1); saveDoc(doc);
+  if (pv) { free(pv.orig, pv.small); pv = null; }
   openDoc(doc);
   toast(`Page ${idx + 1} deleted`, {
     undo: () => { doc.pages.splice(idx, 0, page); saveDoc(doc); if (cur === doc) renderDoc(); },
@@ -1123,6 +1175,23 @@ $("#pv-delete").onclick = () => {
 /* ---------- export ---------- */
 const exportOpts = Object.assign({ format: "pdf", paper: "fit", quality: "standard" }, LS.get("export", {}));
 const QUALITY = { small: { max: 1400, q: 0.62, k: 0.35 }, standard: { max: 2000, q: 0.76, k: 0.75 }, high: { max: 2600, q: 0.9, k: 1.15 } };
+// iOS only opens the share sheet from a tap if it happens within a few seconds of the tap, and building a PDF can
+// take longer. So the file is built in the background while the export sheet is open, and the save button
+// hands the finished file straight to the share sheet.
+let prep = null, prepTok = 0, prepChain = Promise.resolve();
+class Stale extends Error {}
+function prepKey(doc){ const o = exportOpts; return [doc.id, doc.updated, doc.pages.length, o.format, o.format === "pdf" ? o.paper : "", o.quality].join("|"); }
+function startPrep(){
+  const doc = cur; if (!doc || !doc.pages.length) return;
+  const key = prepKey(doc); if (prep && prep.key === key && !prep.err) return;
+  const tok = ++prepTok, opts = { ...exportOpts };
+  const p = prep = { key, result: null, err: null, progress: "", onProgress: null };
+  const progress = t => { p.progress = t; if (p.onProgress) p.onProgress(t); };
+  p.promise = prepChain = prepChain.catch(() => {}).then(() => buildExport(doc, opts, progress, () => tok !== prepTok))
+    .then(r => { p.result = r; if (prep === p) syncEst(); return r; }, e => { p.err = e; if (prep === p) syncEst(); throw e; });
+  p.promise.catch(() => {});
+}
+function stopPrep(){ prepTok++; prep = null; }
 function openExport(){
   if (!cur || !cur.pages.length) return;
   $("#sheet").hidden = false; syncSheet();
@@ -1132,15 +1201,24 @@ function syncSheet(){
     const key = seg.dataset.key; seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === exportOpts[key]));
   });
   $("#f-paper").hidden = exportOpts.format !== "pdf";
-  const n = cur.pages.length; const bytes = cur.pages.reduce((s, p) => s + (p.bytes || 300000), 0) * QUALITY[exportOpts.quality].k;
-  const what = exportOpts.format === "pdf" ? `1 PDF, ${n} ${n === 1 ? "page" : "pages"}` : (n === 1 ? "1 JPG" : `${n} JPGs in a ZIP`);
-  $("#est").textContent = `${what} · about ${fmtBytes(bytes)}`;
-  $("#do-export").textContent = exportOpts.format === "pdf" ? "Save PDF" : (n === 1 ? "Save JPG" : "Save ZIP");
+  const n = cur.pages.length, many = exportOpts.format === "jpg" && n > 1;
+  $("#do-zip").hidden = !many;
+  $("#do-export").innerHTML = `<svg class="i"><use href="#i-export"/></svg>` +
+    (exportOpts.format === "pdf" ? "Save or share PDF" : many ? `Save ${n} images` : "Save or share JPG");
+  startPrep(); syncEst();
+}
+function syncEst(){
+  if (!cur) return;
+  const n = cur.pages.length, o = exportOpts, r = prep && prep.result;
+  const what = o.format === "pdf" ? `1 PDF, ${pagesWord(n)}` : (n === 1 ? "1 JPG" : `${n} JPGs`);
+  const size = r && r.files.length ? fmtBytes(r.files.reduce((s, f) => s + f.size, 0))
+    : "about " + fmtBytes(cur.pages.reduce((s, p) => s + (p.bytes || 300000), 0) * QUALITY[o.quality].k);
+  $("#est").textContent = `${what} · ${size}${prep && !r && !prep.err ? " · preparing…" : ""}`;
 }
 document.querySelectorAll("#sheet .seg").forEach(seg => seg.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; exportOpts[seg.dataset.key] = b.dataset.v; LS.set("export", exportOpts); syncSheet();
 }));
-$("#sheet-scrim").onclick = () => { $("#sheet").hidden = true; };
+$("#sheet-scrim").onclick = () => { $("#sheet").hidden = true; if (prep && !prep.result) stopPrep(); };
 function safeName(s){ return (s || "Scan").replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim().slice(0, 80) || "Scan"; }
 async function pageJpeg(page, Q){
   const once = async () => {
@@ -1151,23 +1229,37 @@ async function pageJpeg(page, Q){
   try { return await once(); }
   catch (e) { if (await repairPage(page)) return once(); throw e; }
 }
-// Gets every page as a JPEG, skipping pages whose image is lost. Returns { items, lost: [page numbers] }.
-async function collectPages(doc, label){
-  const Q = QUALITY[exportOpts.quality]; const items = [], lost = [];
+// Builds the export files, skipping pages whose image is lost: { files: [File], zip: File|null, lost: [page numbers] }.
+async function buildExport(doc, o, progress, stale){
+  const Q = QUALITY[o.quality], pdfMode = o.format === "pdf", base = safeName(doc.name);
+  const items = [], lost = [];
   for (let i = 0; i < doc.pages.length; i++) {
-    busy(`${label} · page ${i + 1} of ${doc.pages.length}`); await frame();
+    if (stale()) throw new Stale("stale");
+    progress(`${pdfMode ? "Building PDF" : "Preparing images"} · page ${i + 1} of ${doc.pages.length}`); await frame();
     try { items.push(await pageJpeg(doc.pages[i], Q)); } catch (e) { console.warn("page export failed", i, e); lost.push(i + 1); }
   }
-  return { items, lost };
+  const out = { files: [], zip: null, lost };
+  if (!items.length || stale()) return out;
+  if (pdfMode) {
+    progress("Building PDF…"); await frame();
+    out.files = [new File([await buildPdf(items, doc, o)], base + ".pdf", { type: "application/pdf" })];
+  } else {
+    out.files = items.map((it, i) => new File([it.blob], items.length === 1 ? base + ".jpg" : `${base} ${String(i + 1).padStart(2, "0")}.jpg`, { type: "image/jpeg" }));
+    if (out.files.length > 1) {
+      progress("Zipping…"); await frame(); const zip = new JSZip(); out.files.forEach(f => zip.file(f.name, f));
+      out.zip = new File([await zip.generateAsync({ type: "blob", compression: "STORE" })], base + ".zip", { type: "application/zip" });
+    }
+  }
+  return out;
 }
-async function buildPdf(items, doc){
+async function buildPdf(items, doc, o = exportOpts){
   const { jsPDF } = window.jspdf; let pdf = null;
   for (let i = 0; i < items.length; i++) {
     const { blob, w, h } = items[i];
     const bytes = new Uint8Array(await blob.arrayBuffer());
     let pw, ph;
-    if (exportOpts.paper === "fit") { if (w >= h) { ph = 210; pw = 210 * w / h; } else { pw = 210; ph = 210 * h / w; } }
-    else { const [a, b] = PAPER[exportOpts.paper]; if (w > h) { pw = b; ph = a; } else { pw = a; ph = b; } }
+    if (o.paper === "fit") { if (w >= h) { ph = 210; pw = 210 * w / h; } else { pw = 210; ph = 210 * h / w; } }
+    else { const [a, b] = PAPER[o.paper]; if (w > h) { pw = b; ph = a; } else { pw = a; ph = b; } }
     const orient = pw > ph ? "l" : "p";
     if (!pdf) pdf = new jsPDF({ unit: "mm", format: [pw, ph], orientation: orient, compress: true }); else pdf.addPage([pw, ph], orient);
     const s = Math.min(pw / w, ph / h); const dw = w * s, dh = h * s;
@@ -1176,60 +1268,73 @@ async function buildPdf(items, doc){
   pdf.setProperties({ title: doc.name, creator: "Flatbed" });
   return pdf.output("blob");
 }
-async function saveFile(filename, blob, note = ""){
+const savedText = files => files.length > 1 ? `Saved ${files.length} images` : `Saved ${files[0].name}`;
+// Hands files to the share sheet (Save to Files, Save Images, AirDrop, …). Must be called straight from a tap:
+// nothing may be awaited before navigator.share. Returns "ok", "cancel", "needs-tap" or "fail".
+async function deliver(files, note){
   const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
   if (dl) {
-    try { await dl.save({ filename, data: blob }); toast(note || `Saved ${filename}`); }
+    try { for (const f of files) await dl.save({ filename: f.name, data: f }); toast(note || savedText(files)); return "ok"; }
     catch (e) {
       const code = (e && e.code) || "unknown";
-      if (code === "declined") return;
-      const msg = {
+      if (code === "declined") return "cancel";
+      toast({
         rate_limited: "A save is already waiting for your answer. Finish that one, then try again.",
         too_large: "That file is too big to save here. Choose Small quality and try again.",
-      }[code] || `Saving didn't work in this view (${code}). Try again from the Claude app.`;
-      toast(msg);
+      }[code] || `Saving didn't work in this view (${code}). Try again from the Claude app.`);
+      return "fail";
     }
-    return;
   }
-  // Standalone site: building the file takes too long for iOS to still count the Export tap, so the share sheet
-  // opens from a second tap on "Save or share…".
-  const type = { pdf: "application/pdf", zip: "application/zip", jpg: "image/jpeg" }[filename.split(".").pop()] || blob.type;
-  const file = new File([blob], filename, { type });
-  $("#ready-title").textContent = filename.endsWith(".pdf") ? "Your PDF is ready" : "Your images are ready";
-  $("#ready-info").textContent = `${filename} · ${fmtBytes(blob.size)}${note ? " · " + note : ""}`;
-  $("#ready").hidden = false;
-  $("#ready-share").onclick = async () => {
-    $("#ready").hidden = true;
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: filename }); return; }
-      catch (e) { if (e && e.name === "AbortError") return; console.warn("share failed", e); }
+  if (navigator.canShare && navigator.canShare({ files })) {
+    // files only: adding a title makes iOS treat the share as text and hides "Save Image"
+    try { await navigator.share({ files }); if (note) toast(note); return "ok"; }
+    catch (e) {
+      if (e && e.name === "AbortError") return "cancel";
+      if (e && e.name === "NotAllowedError") return "needs-tap";
+      console.warn("share failed", e);
     }
-    const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = filename; document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000); toast(`Saved ${filename}`);
-  };
+  }
+  files.forEach((f, i) => setTimeout(() => {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+  }, i * 400));
+  toast(note || savedText(files)); return "ok";
+}
+// Fallback when the tap no longer counts (the file wasn't ready in time): one more tap opens the share sheet.
+function showReady(files, note){
+  const name = files[0].name;
+  $("#ready-title").textContent = name.endsWith(".pdf") ? "Your PDF is ready" : name.endsWith(".zip") ? "Your ZIP is ready" : files.length > 1 ? "Your images are ready" : "Your image is ready";
+  $("#ready-info").textContent = `${files.length > 1 ? files.length + " images" : name} · ${fmtBytes(files.reduce((s, f) => s + f.size, 0))}${note ? " · " + note : ""}`;
+  $("#ready").hidden = false;
+  $("#ready-share").onclick = () => { $("#ready").hidden = true; deliver(files, ""); };
 }
 $("#ready-scrim").onclick = () => { $("#ready").hidden = true; };
-$("#do-export").onclick = async () => {
-  const doc = cur; if (!doc) return; $("#sheet").hidden = true; const base = safeName(doc.name);
-  let file, name, lost = [], step = "reading pages";
-  try {
-    const pdfMode = exportOpts.format === "pdf";
-    const got = await collectPages(doc, pdfMode ? "Building PDF" : "Preparing images"); lost = got.lost;
-    if (!got.items.length) { unbusy(); renderDoc(); toast("None of these pages could be read. Retake them, then export again."); return; }
-    if (pdfMode) { step = "building the PDF"; busy("Building PDF…"); await frame(); file = await buildPdf(got.items, doc); name = base + ".pdf"; }
-    else if (got.items.length === 1) { file = got.items[0].blob; name = base + ".jpg"; }
-    else {
-      step = "zipping"; busy("Zipping…"); await frame(); const zip = new JSZip();
-      got.items.forEach((it, i) => zip.file(`${base} ${String(i + 1).padStart(2, "0")}.jpg`, it.blob));
-      file = await zip.generateAsync({ type: "blob", compression: "STORE" }); name = base + ".zip";
-    }
-  } catch (e) {
-    console.warn(e); unbusy();
-    toast(`Export stopped while ${step} (${(e && e.message) || "unknown error"}). Try again; if it keeps failing, export fewer pages.`); return;
-  }
-  unbusy(); if (lost.length) renderDoc();
-  await saveFile(name, file, lost.length ? `Page ${lost.join(", ")} couldn't be read and ${lost.length === 1 ? "was" : "were"} left out.` : "");
-};
+function finishExport(r, zip, direct){
+  if (!r.files.length) { renderDoc(); toast("None of these pages could be read. Retake them, then export again."); return; }
+  if (r.lost.length) renderDoc();
+  const note = r.lost.length ? `Page ${r.lost.join(", ")} couldn't be read and ${r.lost.length === 1 ? "was" : "were"} left out.` : "";
+  const files = zip && r.zip ? [r.zip] : r.files;
+  if (!direct) { showReady(files, note); return; }
+  deliver(files, note).then(res => { if (res === "needs-tap") showReady(files, note); });
+}
+async function exportTap(zip){
+  if (!cur) return;
+  if (!prep || prep.err) { stopPrep(); startPrep(); }
+  const p = prep; $("#sheet").hidden = true;
+  if (p.result) { finishExport(p.result, zip, true); return; }
+  const t0 = Date.now();
+  busy(p.progress || "Preparing…"); p.onProgress = t => busy(t);
+  let r;
+  try { r = await p.promise; }
+  catch (e) {
+    console.warn(e); unbusy(); stopPrep();
+    toast(`Export stopped (${(e && e.message) || "unknown error"}). Try again; if it keeps failing, export fewer pages.`); return;
+  } finally { p.onProgress = null; }
+  unbusy();
+  finishExport(r, zip, Date.now() - t0 < 4000); // iOS still counts the tap for about 5 s
+}
+$("#do-export").onclick = () => exportTap(false);
+$("#do-zip").onclick = () => exportTap(true);
 
 /* ---------- sample photo ---------- */
 async function trySample(){

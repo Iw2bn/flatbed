@@ -1,6 +1,6 @@
 // Offline support. The app files are fetched fresh when online and served from the cache when offline;
 // the version-pinned libraries from the CDNs are cached on first use and then never fetched again.
-const VERSION = "flatbed-0559c81320"; // stamped by build.py
+const VERSION = "flatbed-c4f8bb37df"; // stamped by build.py
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png"];
 const CDN = ["cdnjs.cloudflare.com", "cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"];
 

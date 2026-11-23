@@ -15,18 +15,37 @@ HEAD = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="description" content="Scan documents with your phone: Flatbed finds the page, straightens it, cleans it up and saves a PDF.">
 <meta name="theme-color" content="#F1F2F6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1015" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Flatbed">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- solid bar: with a see-through one, iOS 26 blurs the app's content under the clock (and lays the page out too short) -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<script>
+// Safety net for an app installed while the status bar was see-through (it keeps that until re-added to the Home
+// Screen): iOS can then lay the page out shorter than the screen by about the status bar's height, leaving an empty
+// band under the buttons. Measure that and stretch the layout (--vp-gap). With the solid bar it measures 0.
+(() => {
+  // installed on an iPhone with a notch or Dynamic Island: content near the top gets blurred by iOS (see .ios-app)
+  if (navigator.standalone && Math.max(screen.width, screen.height) >= 812) document.documentElement.classList.add("ios-app");
+  if (!(navigator.standalone || matchMedia("(display-mode: standalone)").matches)) return;
+  const fit = () => {
+    const root = document.documentElement, top = parseFloat(getComputedStyle(root).paddingTop) || 0;
+    const full = innerWidth < innerHeight ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    const gap = full - innerHeight;
+    root.style.setProperty("--vp-gap", top > 0 && gap > 0 && gap <= top + 10 ? gap + "px" : "0px");
+  };
+  fit(); addEventListener("resize", fit); addEventListener("pageshow", fit);
+  addEventListener("orientationchange", () => setTimeout(fit, 300));
+})();
+</script>
 </head>
 <body>
 """
