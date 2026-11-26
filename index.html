@@ -9,18 +9,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Flatbed">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- "default" keeps the clock readable: iOS colours the status bar from theme-color (light or dark, and the app
+     switches it for the dark editing screens). "black-translucent" always draws white text, invisible on the light library. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:#F1F2F6}
+@media (prefers-color-scheme: dark){:root{background:#0F1015}}</style>
 </head>
 <body>
 <title>Flatbed</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- non-blocking: on a slow connection the app draws at once in the system font, then swaps -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Layout: a one-screen phone app. Stacked full-height views, each = header / scrolling body / thumb-reach action bar.
    Editing screens ("studio") are always dark so photos read true; the library and document follow the theme. */
@@ -40,13 +45,21 @@
   --bg:#0F1015; --surface:#1A1C24; --ink:#ECEDF3; --muted:#9A9EAE; --line:#2B2E39;
   --accent:#8189FF; --accent-ink:#0F1015; --accent-soft:#252A55; --danger:#FF6B6B; color-scheme:dark}
 
-html{height:100%;box-sizing:border-box}
+html{height:100%;height:100dvh;box-sizing:border-box;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0}
 body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.4;
-  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-font-smoothing:antialiased;
+  /* app chrome, not a document: no text selection or "Save image" callout on long-press (that also fights press-to-reorder) */
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 body.in-studio{background:var(--studio)}
+html{background:var(--bg)}
+html:has(body.in-studio){background:var(--studio)} /* the strip behind the home indicator */
+/* no double-tap-to-zoom delay or accidental zoom when tapping Rotate twice */
+button,a,input,.tile{touch-action:manipulation}
+.lib-body,.doc-body,.sheet-panel{overscroll-behavior:contain}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
@@ -185,6 +198,16 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .sheet-panel{position:relative;background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;padding-top:8px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));animation:up .25s ease-out;max-height:90%;overflow-y:auto}
 @keyframes up{from{transform:translateY(100%)}}
 .grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 10px}
+/* drag the top of a sheet down to close it, as in iOS */
+.grab-zone{margin-top:-8px;padding-top:8px;touch-action:none;cursor:grab}
+.sheet-panel.dragging{animation:none;transition:none}
+.sheet-panel.settle{transition:transform .2s ease-out}
+
+/* Add to Home Screen hint, shown in Safari only */
+.a2hs{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);color:var(--ink);border-radius:12px;padding:10px 6px 10px 12px;font-size:13.5px;margin-bottom:12px}
+.a2hs p{margin:0;flex:1;padding-top:2px}
+.a2hs svg.i{color:var(--accent);margin-top:1px}
+.a2hs .icon-btn{width:36px;height:36px;margin-top:-6px;color:var(--muted)}
 .sheet-panel h2{margin:4px 0 14px;font-size:19px}
 .field{margin-bottom:14px}
 .lbl{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
@@ -294,8 +317,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-scrim" id="sheet-scrim"></div>
   <div class="sheet-panel gut" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-    <div class="grab"></div>
-    <h2 id="sheet-title">Export</h2>
+    <div class="grab-zone"><div class="grab"></div>
+    <h2 id="sheet-title">Export</h2></div>
     <div class="field"><span class="lbl">Format</span>
       <div class="seg" data-key="format"><button data-v="pdf">PDF</button><button data-v="jpg">JPG images</button></div></div>
     <div class="field" id="f-paper"><span class="lbl">Page size</span>
@@ -310,8 +333,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 <div class="sheet" id="ready" hidden>
   <div class="sheet-scrim" id="ready-scrim"></div>
   <div class="sheet-panel gut" role="dialog" aria-modal="true" aria-labelledby="ready-title">
-    <div class="grab"></div>
-    <h2 id="ready-title">Ready to save</h2>
+    <div class="grab-zone"><div class="grab"></div>
+    <h2 id="ready-title">Ready to save</h2></div>
     <p class="est mono" id="ready-info"></p>
     <button class="btn primary wide" id="ready-share"><svg class="i"><use href="#i-export"/></svg>Save or share…</button>
   </div>
@@ -323,9 +346,10 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 <input type="file" id="in-camera" class="vh" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
 <input type="file" id="in-photos" class="vh" accept="image/*" multiple tabindex="-1" aria-hidden="true">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- deferred: none is needed to draw the library, so they no longer hold up the first screen -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js" onload="window.onSortableReady && onSortableReady()"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 "use strict";
 const OPENCV_URL = "https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.10.0-release.1/dist/opencv.js";
@@ -333,6 +357,7 @@ const MAX_ORIG = 3000;   // longest side kept from the camera photo (iOS canvas 
 const MAX_OUT = 2400;    // longest side of a straightened page (~290 dpi on A4)
 const FILTERS = [{id:"original",label:"Original"},{id:"auto",label:"Auto"},{id:"gray",label:"Grey"},{id:"bw",label:"B&W"}];
 const PAPER = { a4:[210,297], letter:[215.9,279.4] };
+const EDGE = 22;         // px from the left edge where a swipe means "back"
 
 const $ = (s, r=document) => r.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -750,11 +775,19 @@ async function saveDoc(d = cur){
 
 /* ================= views ================= */
 const VIEWS = ["v-library", "v-doc", "v-adjust", "v-page"];
+const STANDALONE = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+// iOS tints the status bar (home-screen app) and Safari's toolbars from theme-color, so match it to the view
+const themeMetas = [...document.querySelectorAll('meta[name="theme-color"]')].map(m => [m, m.content]);
 function show(id){
   VIEWS.forEach(v => { $("#" + v).hidden = v !== id; });
-  document.body.classList.toggle("in-studio", id === "v-adjust" || id === "v-page");
+  const studio = id === "v-adjust" || id === "v-page";
+  document.body.classList.toggle("in-studio", studio);
+  themeMetas.forEach(([m, c]) => { m.content = studio ? "#0C0D11" : c; });
   hideToast(true);
 }
+// iOS Safari only applies :active styles when a touch listener exists
+document.addEventListener("touchstart", () => {}, { passive: true });
+window.onSortableReady = () => { if (cur && !$("#v-doc").hidden) renderDoc(); };
 function busy(text){ $("#busy-text").textContent = text; $("#busy").hidden = false; }
 function unbusy(){ $("#busy").hidden = true; }
 let toastTimer = null, toastUndo = null;
@@ -774,6 +807,14 @@ async function renderLibrary(){
   const body = $("#lib-body"); body.textContent = "";
   docs.sort((a, b) => b.updated - a.updated);
   $("#lib-sub").textContent = docs.length ? `${docs.length} ${docs.length === 1 ? "document" : "documents"}` : "Pocket document scanner";
+  // In Safari (not the home-screen app) iOS may clear the site's storage after a week without a visit
+  const hint = navigator.standalone === false && !window.claude && !LS.get("a2hs-hidden", false) ? (() => {
+    const h = document.createElement("div"); h.className = "a2hs";
+    h.innerHTML = `<svg class="i"><use href="#i-export"/></svg><p><b>Add Flatbed to your Home Screen.</b> Tap Share, then “Add to Home Screen”. It opens full screen, works offline, and Safari won't clear your scans.</p>
+      <button class="icon-btn" aria-label="Hide tip"><svg class="i" style="width:18px;height:18px"><use href="#i-plus" transform="rotate(45 12 12)"/></svg></button>`;
+    h.querySelector("button").onclick = () => { LS.set("a2hs-hidden", true); h.remove(); };
+    return h;
+  })() : null;
   if (!docs.length) {
     body.innerHTML = `
       <div class="empty">
@@ -788,13 +829,15 @@ async function renderLibrary(){
         </div>
       </div>`;
     $("#try-sample").onclick = trySample;
+    if (hint) body.prepend(hint);
     return;
   }
+  if (hint) body.appendChild(hint);
   const lbl = document.createElement("div"); lbl.className = "section-label"; lbl.textContent = "Recent"; body.appendChild(lbl);
   const ul = document.createElement("ul"); ul.className = "doc-list"; body.appendChild(ul);
   for (const d of docs) {
     const li = document.createElement("li"); li.className = "doc-row";
-    li.innerHTML = `<button class="doc-open"><img class="doc-thumb" alt=""><span class="doc-text"><span class="doc-name"></span><span class="doc-meta mono"></span></span></button>
+    li.innerHTML = `<button class="doc-open"><img class="doc-thumb" alt="" decoding="async"><span class="doc-text"><span class="doc-name"></span><span class="doc-meta mono"></span></span></button>
       <button class="icon-btn" aria-label="Delete document"><svg class="i"><use href="#i-trash"/></svg></button>`;
     li.querySelector(".doc-name").textContent = d.name;
     li.querySelector(".doc-meta").textContent = `${d.pages.length} ${d.pages.length === 1 ? "page" : "pages"} · ${fmtDate(d.updated)}`;
@@ -831,7 +874,7 @@ async function renderDoc(){
   cur.pages.forEach((p, i) => {
     const b = document.createElement("button"); b.className = "tile" + (p.id === freshId ? " fresh" : ""); b.dataset.id = p.id;
     b.setAttribute("aria-label", `Page ${i + 1}`);
-    b.innerHTML = `<img alt=""><span class="lost-note">This page's image was lost. Tap to retake it.</span><span class="num mono">${i + 1}</span>`;
+    b.innerHTML = `<img alt="" decoding="async"><span class="lost-note">This page's image was lost. Tap to retake it.</span><span class="num mono">${i + 1}</span>`;
     const markLost = () => b.classList.add("lost");
     if (p.lost) markLost(); else fillThumb(b.querySelector("img"), p, markLost);
     b.onclick = () => {
@@ -1129,11 +1172,41 @@ $("#pv-delete").onclick = () => {
 };
 (() => { // swipe between pages
   const st = $("#pv-stage"); let sx = null, sy = 0;
-  st.addEventListener("pointerdown", e => { sx = e.clientX; sy = e.clientY; });
+  st.addEventListener("pointerdown", e => { sx = e.clientX < EDGE ? null : e.clientX; sy = e.clientY; }); // the left edge is "back"
   st.addEventListener("pointerup", e => {
     if (sx == null || !pv) return; const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { const n = pv.idx + (dx < 0 ? 1 : -1); if (n >= 0 && n < cur.pages.length) openPage(n); }
   });
+})();
+(() => { // swipe in from the left edge to go back, like iOS (the home-screen app has no browser back gesture)
+  let s = null;
+  document.addEventListener("pointerdown", e => {
+    s = e.pointerType !== "mouse" && e.clientX < EDGE && $("#sheet").hidden && $("#ready").hidden && $("#busy").hidden
+      ? { x: e.clientX, y: e.clientY, v: !$("#v-doc").hidden ? "doc" : !$("#v-page").hidden ? "page" : null } : null;
+  }, true);
+  document.addEventListener("pointerup", e => {
+    if (!s || !s.v) return; const dx = e.clientX - s.x, dy = Math.abs(e.clientY - s.y); const v = s.v; s = null;
+    if (dx > 70 && dx > dy * 1.5) {
+      // swallow the click this swipe would otherwise make on whatever is under the finger
+      $(v === "doc" ? "#doc-back" : "#pv-back").click();
+      const eat = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener("click", eat, { capture: true, once: true });
+      setTimeout(() => document.removeEventListener("click", eat, true), 400);
+    }
+  }, true);
+})();
+(() => { // drag a sheet down by its top to close it
+  for (const id of ["sheet", "ready"]) {
+    const sheet = $("#" + id), panel = sheet.querySelector(".sheet-panel"), zone = panel.querySelector(".grab-zone");
+    let y0 = null, dy = 0;
+    zone.addEventListener("pointerdown", e => { y0 = e.clientY; dy = 0; zone.setPointerCapture(e.pointerId); panel.classList.remove("settle"); panel.classList.add("dragging"); });
+    zone.addEventListener("pointermove", e => { if (y0 == null) return; dy = Math.max(0, e.clientY - y0); panel.style.transform = `translateY(${dy}px)`; });
+    const end = () => {
+      if (y0 == null) return; y0 = null; panel.classList.remove("dragging"); panel.classList.add("settle");
+      if (dy > Math.min(120, panel.offsetHeight * 0.3)) { panel.style.transform = "translateY(100%)"; setTimeout(() => { sheet.hidden = true; panel.style.transform = ""; panel.classList.remove("settle"); }, 200); }
+      else panel.style.transform = "";
+    };
+    zone.addEventListener("pointerup", end); zone.addEventListener("pointercancel", end);
+  }
 })();
 
 /* ---------- export ---------- */

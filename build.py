@@ -22,11 +22,15 @@ HEAD = """<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Flatbed">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- "default" keeps the clock readable: iOS colours the status bar from theme-color (light or dark, and the app
+     switches it for the dark editing screens). "black-translucent" always draws white text, invisible on the light library. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:#F1F2F6}
+@media (prefers-color-scheme: dark){:root{background:#0F1015}}</style>
 </head>
 <body>
 """
